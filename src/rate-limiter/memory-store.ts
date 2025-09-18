@@ -61,10 +61,14 @@ export class MemoryStore implements Store {
     return this.store.size;
   }
 
-  destroy(): void {
+  async isHealthy(): Promise<boolean> {
+    return true; // Memory store is always healthy
+  }
+
+  async destroy(): Promise<void> {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    this.clear();
+    await this.clear();
   }
 }

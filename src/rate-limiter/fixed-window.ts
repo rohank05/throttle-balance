@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type {
   RateLimiterConfig,
+  RequiredRateLimiterConfig,
   RateLimitResult,
   RateLimitInfo,
   Store,
@@ -8,10 +9,11 @@ import type {
   Logger,
 } from '../types/index.js';
 import { MemoryStore } from './memory-store.js';
+import { StoreFactory } from '../stores/index.js';
 import { createDefaultKeyGenerator, createDefaultLogger, getResetTime } from '../utils/index.js';
 
 export class FixedWindowRateLimiter {
-  private readonly config: Required<RateLimiterConfig>;
+  private readonly config: RequiredRateLimiterConfig;
   private readonly store: Store;
   private readonly keyGenerator: KeyGenerator;
   private readonly logger: Logger;
@@ -21,6 +23,16 @@ export class FixedWindowRateLimiter {
     this.store = store || new MemoryStore();
     this.keyGenerator = config.keyGenerator || createDefaultKeyGenerator();
     this.logger = logger || createDefaultLogger();
+  }
+
+  static async create(config: RateLimiterConfig, logger?: Logger): Promise<FixedWindowRateLimiter> {
+    const { store, usingFallback } = await StoreFactory.createStoreWithFallback(config, logger);
+
+    if (usingFallback && config.store === 'redis') {
+      logger?.warn('Using memory store fallback instead of Redis for rate limiting');
+    }
+
+    return new FixedWindowRateLimiter(config, store, logger);
   }
 
   async checkLimit(req: Request): Promise<RateLimitResult> {
@@ -104,8 +116,8 @@ export class FixedWindowRateLimiter {
     };
   }
 
-  private createDefaultConfig(config: RateLimiterConfig): Required<RateLimiterConfig> {
-    return {
+  private createDefaultConfig(config: RateLimiterConfig): RequiredRateLimiterConfig {
+    const result: RequiredRateLimiterConfig = {
       windowMs: config.windowMs,
       maxRequests: config.maxRequests,
       keyGenerator: config.keyGenerator || createDefaultKeyGenerator(),
@@ -115,12 +127,21 @@ export class FixedWindowRateLimiter {
       headers: config.headers !== false,
       skipSuccessfulRequests: config.skipSuccessfulRequests || false,
       skipFailedRequests: config.skipFailedRequests || false,
+      store: config.store || 'memory',
     };
+
+    if (config.redis) {
+      result.redis = config.redis;
+    }
+
+    return result;
   }
 
-  destroy(): void {
-    if (this.store instanceof MemoryStore) {
-      this.store.destroy();
+  async destroy(): Promise<void> {
+    try {
+      await this.store.destroy();
+    } catch (error) {
+      this.logger.error('Error destroying rate limiter store', error);
     }
   }
 }

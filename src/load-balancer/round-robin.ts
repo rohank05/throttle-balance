@@ -15,7 +15,7 @@ export class RoundRobinLoadBalancer {
   private serverHealth: Map<string, ServerHealth> = new Map();
   private serverStats: Map<string, ServerStats> = new Map();
   private healthCheckInterval?: NodeJS.Timeout;
-  private readonly healthCheckConfig: Required<HealthCheckConfig>;
+  private readonly healthCheckConfig: HealthCheckConfig;
   private readonly logger: Logger;
 
   constructor(
@@ -240,8 +240,8 @@ export class RoundRobinLoadBalancer {
 
   private createDefaultHealthCheckConfig(
     config?: HealthCheckConfig,
-  ): Required<HealthCheckConfig> {
-    return {
+  ): HealthCheckConfig {
+    const result: HealthCheckConfig = {
       enabled: config?.enabled !== false,
       endpoint: config?.endpoint || '/health',
       interval: config?.interval || 30000,
@@ -249,7 +249,16 @@ export class RoundRobinLoadBalancer {
       retries: config?.retries || 3,
       successThreshold: config?.successThreshold || 2,
       failureThreshold: config?.failureThreshold || 3,
+      type: config?.type ?? 'http',
+      expectedStatusCodes: config?.expectedStatusCodes ?? [200],
+      headers: config?.headers ?? {},
     };
+
+    if (config?.expectedResponseBody) {
+      result.expectedResponseBody = config.expectedResponseBody;
+    }
+
+    return result;
   }
 
   destroy(): void {

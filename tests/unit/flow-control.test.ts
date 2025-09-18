@@ -90,7 +90,7 @@ describe('FlowControl', () => {
   });
 
   describe('conditional component loading', () => {
-    it('should only initialize rate limiter when configured', () => {
+    it('should only initialize rate limiter when configured', async () => {
       const config: FlowControlConfig = {
         rateLimiter: {
           windowMs: 60000,
@@ -98,7 +98,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
 
       expect(flowControl.getRateLimiter()).toBeDefined();
       expect(flowControl.getLoadBalancer()).toBeUndefined();
@@ -106,7 +106,7 @@ describe('FlowControl', () => {
       flowControl.destroy();
     });
 
-    it('should only initialize load balancer when configured', () => {
+    it('should only initialize load balancer when configured', async () => {
       const config: FlowControlConfig = {
         loadBalancer: {
           servers: [
@@ -115,7 +115,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
 
       expect(flowControl.getRateLimiter()).toBeUndefined();
       expect(flowControl.getLoadBalancer()).toBeDefined();
@@ -123,7 +123,7 @@ describe('FlowControl', () => {
       flowControl.destroy();
     });
 
-    it('should initialize both components when configured', () => {
+    it('should initialize both components when configured', async () => {
       const config: FlowControlConfig = {
         rateLimiter: {
           windowMs: 60000,
@@ -136,7 +136,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
 
       expect(flowControl.getRateLimiter()).toBeDefined();
       expect(flowControl.getLoadBalancer()).toBeDefined();
@@ -146,7 +146,7 @@ describe('FlowControl', () => {
   });
 
   describe('middleware functionality', () => {
-    it('should provide middleware function', () => {
+    it('should provide middleware function', async () => {
       const config: FlowControlConfig = {
         rateLimiter: {
           windowMs: 60000,
@@ -154,7 +154,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const middleware = flowControl.getMiddleware();
 
       expect(typeof middleware).toBe('function');
@@ -170,7 +170,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const middleware = flowControl.getMiddleware();
 
       const req = createMockRequest() as Request;
@@ -201,7 +201,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const middleware = flowControl.getMiddleware();
 
       const req = createMockRequest() as Request;
@@ -218,7 +218,7 @@ describe('FlowControl', () => {
   });
 
   describe('statistics', () => {
-    it('should provide statistics for enabled components', () => {
+    it('should provide statistics for enabled components', async () => {
       const config: FlowControlConfig = {
         rateLimiter: {
           windowMs: 60000,
@@ -231,7 +231,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const stats = flowControl.getStats();
 
       expect(stats.rateLimiter.enabled).toBe(true);
@@ -240,7 +240,7 @@ describe('FlowControl', () => {
       flowControl.destroy();
     });
 
-    it('should show disabled components in statistics', () => {
+    it('should show disabled components in statistics', async () => {
       const config: FlowControlConfig = {
         rateLimiter: {
           windowMs: 60000,
@@ -248,7 +248,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const stats = flowControl.getStats();
 
       expect(stats.rateLimiter.enabled).toBe(true);
@@ -268,7 +268,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const rateLimiter = flowControl.getRateLimiter();
 
       // Mock checkLimit to throw error
@@ -292,7 +292,7 @@ describe('FlowControl', () => {
   });
 
   describe('destroy', () => {
-    it('should clean up all components', () => {
+    it('should clean up all components', async () => {
       const config: FlowControlConfig = {
         rateLimiter: {
           windowMs: 60000,
@@ -305,7 +305,7 @@ describe('FlowControl', () => {
         },
       };
 
-      const flowControl = new FlowControl(config);
+      const flowControl = await FlowControl.create(config);
       const rateLimiter = flowControl.getRateLimiter();
       const loadBalancer = flowControl.getLoadBalancer();
 

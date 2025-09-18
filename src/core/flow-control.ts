@@ -9,7 +9,8 @@ import type {
 import { FlowControlError, LoadBalancerError } from '../types/index.js';
 import { FixedWindowRateLimiter } from '../rate-limiter/fixed-window.js';
 import { RoundRobinLoadBalancer } from '../load-balancer/round-robin.js';
-import { createDefaultLogger, validateConfig } from '../utils/index.js';
+import { createDefaultLogger } from '../utils/index.js';
+import { validateFlowControlConfig, ConfigValidationError } from '../validation/index.js';
 
 export class FlowControl {
   private readonly config: FlowControlConfig;
@@ -18,19 +19,23 @@ export class FlowControl {
   private loadBalancer?: RoundRobinLoadBalancer;
   private middleware?: FlowControlMiddleware;
 
-  constructor(config: FlowControlConfig, logger?: Logger) {
-    this.validateConfiguration(config);
-    this.config = config;
+  private constructor(config: FlowControlConfig, logger?: Logger) {
+    this.config = this.validateConfiguration(config);
     this.logger = logger || createDefaultLogger();
-
-    this.initializeComponents();
     this.middleware = this.createMiddleware();
+  }
 
-    this.logger.info('FlowControl initialized', {
-      rateLimiterEnabled: !!this.rateLimiter,
-      loadBalancerEnabled: !!this.loadBalancer,
-      serverCount: this.config.loadBalancer?.servers?.length || 0,
+  static async create(config: FlowControlConfig, logger?: Logger): Promise<FlowControl> {
+    const instance = new FlowControl(config, logger);
+    await instance.initializeComponents();
+
+    instance.logger.info('FlowControl initialized', {
+      rateLimiterEnabled: !!instance.rateLimiter,
+      loadBalancerEnabled: !!instance.loadBalancer,
+      serverCount: instance.config.loadBalancer?.servers?.length || 0,
     });
+
+    return instance;
   }
 
   getMiddleware(): FlowControlMiddleware {
@@ -59,59 +64,43 @@ export class FlowControl {
     return stats;
   }
 
-  destroy(): void {
+  async destroy(): Promise<void> {
     this.logger.info('Destroying FlowControl instance');
 
+    const destroyPromises: Promise<void>[] = [];
+
     if (this.rateLimiter) {
-      this.rateLimiter.destroy();
+      destroyPromises.push(this.rateLimiter.destroy());
     }
 
     if (this.loadBalancer) {
-      this.loadBalancer.destroy();
+      destroyPromises.push(Promise.resolve(this.loadBalancer.destroy()));
     }
+
+    await Promise.allSettled(destroyPromises);
   }
 
-  private validateConfiguration(config: FlowControlConfig): void {
-    if (!config) {
-      throw new FlowControlError('Configuration is required', 'INVALID_CONFIG');
-    }
+  private validateConfiguration(config: FlowControlConfig): FlowControlConfig {
+    const { error, value } = validateFlowControlConfig(config);
 
-    if (!config.rateLimiter && !config.loadBalancer) {
+    if (error) {
+      const validationError = new ConfigValidationError(
+        'Configuration validation failed',
+        error
+      );
       throw new FlowControlError(
-        'At least one of rateLimiter or loadBalancer must be configured',
-        'INVALID_CONFIG',
+        validationError.getFormattedMessage(),
+        'INVALID_CONFIG'
       );
     }
 
-    if (config.rateLimiter) {
-      validateConfig(config.rateLimiter, ['windowMs', 'maxRequests']);
-      if (config.rateLimiter.windowMs <= 0) {
-        throw new FlowControlError('windowMs must be positive', 'INVALID_CONFIG');
-      }
-      if (config.rateLimiter.maxRequests <= 0) {
-        throw new FlowControlError('maxRequests must be positive', 'INVALID_CONFIG');
-      }
-    }
-
-    if (config.loadBalancer) {
-      validateConfig(config.loadBalancer, ['servers']);
-      if (!Array.isArray(config.loadBalancer.servers) || config.loadBalancer.servers.length === 0) {
-        throw new FlowControlError('servers array cannot be empty', 'INVALID_CONFIG');
-      }
-
-      for (const server of config.loadBalancer.servers) {
-        validateConfig(server, ['host', 'port']);
-        if (typeof server.port !== 'number' || server.port <= 0 || server.port > 65535) {
-          throw new FlowControlError('Invalid server port', 'INVALID_CONFIG');
-        }
-      }
-    }
+    return value;
   }
 
-  private initializeComponents(): void {
+  private async initializeComponents(): Promise<void> {
     if (this.config.rateLimiter) {
       this.logger.debug('Initializing rate limiter');
-      this.rateLimiter = new FixedWindowRateLimiter(this.config.rateLimiter, undefined, this.logger);
+      this.rateLimiter = await FixedWindowRateLimiter.create(this.config.rateLimiter, this.logger);
     }
 
     if (this.config.loadBalancer) {

@@ -51,8 +51,17 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-export function createServerKey(host: string, port: number, protocol: string = 'http'): string {
-  return `${protocol}://${host}:${port}`;
+export function createServerKey(server: { host: string; port: number; protocol?: string }): string;
+export function createServerKey(host: string, port: number, protocol?: string): string;
+export function createServerKey(
+  hostOrServer: string | { host: string; port: number; protocol?: string },
+  port?: number,
+  protocol: string = 'http'
+): string {
+  if (typeof hostOrServer === 'object') {
+    return `${hostOrServer.protocol || 'http'}://${hostOrServer.host}:${hostOrServer.port}`;
+  }
+  return `${protocol}://${hostOrServer}:${port}`;
 }
 
 export function getResetTime(windowMs: number): number {
