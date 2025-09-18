@@ -60,9 +60,79 @@ export interface CircuitBreakerConfig {
   minimumRequests?: number;
 }
 
+export interface SecurityConfig {
+  ipFilter?: IPFilterConfig;
+  requestValidation?: RequestValidationConfig;
+  headers?: SecurityHeadersConfig;
+}
+
+export interface LoggingConfig {
+  level?: 'error' | 'warn' | 'info' | 'debug';
+  transports?: LogTransport[];
+}
+
+export interface StoreConfig {
+  type: 'memory' | 'redis';
+  redis?: RedisConfig;
+}
+
+export interface ObservabilityConfig {
+  metrics?: {
+    enabled?: boolean;
+    prometheus?: {
+      enabled?: boolean;
+      endpoint?: string;
+      prefix?: string;
+    };
+    collector?: {
+      enabled?: boolean;
+      collectInterval?: number;
+      bufferSize?: number;
+    };
+  };
+  tracing?: {
+    enabled?: boolean;
+    serviceName?: string;
+    serviceVersion?: string;
+    jaeger?: {
+      endpoint?: string;
+      agentHost?: string;
+      agentPort?: number;
+    };
+    sampling?: {
+      ratio?: number;
+    };
+  };
+  healthCheck?: {
+    enabled?: boolean;
+    endpoint?: string;
+    checkInterval?: number;
+    aggregation?: boolean;
+  };
+  performance?: {
+    enabled?: boolean;
+    monitoring?: boolean;
+    collectInterval?: number;
+    thresholds?: {
+      memory?: { warning?: number; critical?: number };
+      cpu?: { warning?: number; critical?: number };
+      latency?: { warning?: number; critical?: number };
+    };
+  };
+  gracefulShutdown?: {
+    enabled?: boolean;
+    gracefulTimeoutMs?: number;
+    forceExitTimeoutMs?: number;
+  };
+}
+
 export interface FlowControlConfig {
   rateLimiter?: RateLimiterConfig;
   loadBalancer?: LoadBalancerConfig;
+  security?: SecurityConfig;
+  logging?: LoggingConfig;
+  store?: StoreConfig;
+  observability?: ObservabilityConfig;
 }
 
 export interface RateLimitInfo {

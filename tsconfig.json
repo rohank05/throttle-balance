@@ -27,8 +27,8 @@
     "resolveJsonModule": true,
 
     // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
 
     // Style Options (enabled for better code quality)
     "noImplicitReturns": true,

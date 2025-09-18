@@ -227,6 +227,68 @@ const redisStoreSchema = Joi.object({
   }).optional(),
 });
 
+// Observability configuration schema
+const observabilitySchema = Joi.object({
+  metrics: Joi.object({
+    enabled: Joi.boolean().default(true),
+    prometheus: Joi.object({
+      enabled: Joi.boolean().default(true),
+      endpoint: Joi.string().default('/metrics'),
+      prefix: Joi.string().default('flow_control_'),
+      registry: Joi.any().optional(), // Allow custom registry for testing
+      collectDefaultMetrics: Joi.boolean().optional(), // Allow disabling default metrics
+    }).optional(),
+    collector: Joi.object({
+      enabled: Joi.boolean().default(true),
+      collectInterval: Joi.number().integer().min(1000).default(5000),
+      bufferSize: Joi.number().integer().min(10).default(1000),
+    }).optional(),
+  }).optional(),
+  tracing: Joi.object({
+    enabled: Joi.boolean().default(false),
+    serviceName: Joi.string().default('flow-control'),
+    serviceVersion: Joi.string().optional(),
+    jaeger: Joi.object({
+      endpoint: Joi.string().uri().optional(),
+      agentHost: Joi.string().hostname().default('localhost'),
+      agentPort: Joi.number().integer().min(1).max(65535).default(6832),
+    }).optional(),
+    sampling: Joi.object({
+      ratio: Joi.number().min(0).max(1).default(0.1),
+    }).optional(),
+  }).optional(),
+  healthCheck: Joi.object({
+    enabled: Joi.boolean().default(false),
+    endpoint: Joi.string().default('/health'),
+    checkInterval: Joi.number().integer().min(1000).default(30000),
+    aggregation: Joi.boolean().default(false),
+  }).optional(),
+  performance: Joi.object({
+    enabled: Joi.boolean().default(false),
+    monitoring: Joi.boolean().default(true),
+    collectInterval: Joi.number().integer().min(1000).default(5000),
+    thresholds: Joi.object({
+      memory: Joi.object({
+        warning: Joi.number().min(0).max(1).default(0.8),
+        critical: Joi.number().min(0).max(1).default(0.9),
+      }).optional(),
+      cpu: Joi.object({
+        warning: Joi.number().min(0).max(100).default(80),
+        critical: Joi.number().min(0).max(100).default(90),
+      }).optional(),
+      latency: Joi.object({
+        warning: Joi.number().min(0).default(1000),
+        critical: Joi.number().min(0).default(2000),
+      }).optional(),
+    }).optional(),
+  }).optional(),
+  gracefulShutdown: Joi.object({
+    enabled: Joi.boolean().default(false),
+    gracefulTimeoutMs: Joi.number().integer().min(1000).default(30000),
+    forceExitTimeoutMs: Joi.number().integer().min(1000).default(10000),
+  }).optional(),
+}).optional();
+
 // Main FlowControl configuration schema
 export const flowControlConfigSchema = Joi.object({
   rateLimiter: rateLimiterSchema.optional(),
@@ -237,6 +299,7 @@ export const flowControlConfigSchema = Joi.object({
     type: Joi.string().valid('memory', 'redis').default('memory'),
     redis: redisStoreSchema.optional(),
   }).optional(),
+  observability: observabilitySchema,
 }).or('rateLimiter', 'loadBalancer').messages({
   'object.missing': 'At least one of rateLimiter or loadBalancer must be configured',
 });
@@ -270,4 +333,5 @@ export {
   securitySchema,
   loggingSchema,
   redisStoreSchema,
+  observabilitySchema,
 };

@@ -29,6 +29,26 @@ export {
   ConfigValidationError
 } from './validation/index.js';
 
+// Phase 3: Observability & Operations exports
+export {
+  PrometheusExporter,
+  MetricsCollector
+} from './metrics/index.js';
+
+export {
+  OpenTelemetryTracer,
+  SpanMiddleware
+} from './telemetry/index.js';
+
+export {
+  ShutdownManager
+} from './lifecycle/index.js';
+
+export {
+  HealthAggregator,
+  PerformanceMonitor
+} from './monitoring/index.js';
+
 export type {
   FlowControlConfig,
   RateLimiterConfig,
@@ -36,6 +56,7 @@ export type {
   ServerConfig,
   HealthCheckConfig,
   CircuitBreakerConfig,
+  ObservabilityConfig,
   RateLimitInfo,
   RateLimitResult,
   ServerHealth,

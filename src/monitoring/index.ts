@@ -1,0 +1,2 @@
+export { HealthAggregator, type HealthAggregatorConfig, type DependencyCheck, type DependencyHealth, type AggregatedHealth, type HealthTrend } from './health-aggregator.js';
+export { PerformanceMonitor, type PerformanceMonitorConfig, type PerformanceMetrics, type PerformanceAlert, type PerformanceBaseline } from './performance-monitor.js';
